@@ -94,12 +94,13 @@ To make it easier to perform some tasks within the repo, a few commands are avai
 
 ### Build Commands
 
-| Command          | Action                                                   |
-| ---------------- | -------------------------------------------------------- |
-| `make build`     | Compile all contracts in the repo, including submodules. |
-| `make clean`     | Delete the build artifacts and cache directories.        |
-| `make fmt-check` | Lint the contracts.                                      |
-| `make fmt-write` | Format the contracts.                                    |
+| Command                               | Action                                                   |
+| ------------------------------------- | -------------------------------------------------------- |
+| `make build`                          | Compile all contracts in the repo, including submodules. |
+| `make clean`                          | Delete the build artifacts and cache directories.        |
+| `make install package=<PACKAGE_NAME>` | Install one or more dependencies.                        |
+| `make fmt-check`                      | Lint the contracts.                                      |
+| `make fmt-write`                      | Format the contracts.                                    |
 
 ### Test Commands
 

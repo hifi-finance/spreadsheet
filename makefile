@@ -33,6 +33,9 @@ fmt-write::
 gas-report::
 	@forge test --gas-report
 
+install::
+	@forge install --no-commit $(package)
+
 test::
 	@forge test
 
