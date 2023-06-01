@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.17;
 
+import { Ownable } from "@openzeppelin/access/Ownable.sol";
+import { Pausable } from "@openzeppelin/security/Pausable.sol";
 import { IERC721 } from "@openzeppelin/token/ERC721/IERC721.sol";
 import { MerkleProof } from "@openzeppelin/utils/cryptography/MerkleProof.sol";
-import { Ownable } from "@openzeppelin/access/Ownable.sol";
 
 /**
  *
@@ -19,7 +20,7 @@ import { Ownable } from "@openzeppelin/access/Ownable.sol";
 
 /// @title SpreadSheet
 /// @notice Handles the claim and distribution of SHEETs.
-contract SpreadSheet is Ownable {
+contract SpreadSheet is Ownable, Pausable {
     /*//////////////////////////////////////////////////////////////////////////
                                        ERRORS
     //////////////////////////////////////////////////////////////////////////*/
@@ -56,6 +57,12 @@ contract SpreadSheet is Ownable {
     /// @param recipient The account that received the SHEETs.
     /// @param sheetIds The IDs of the SHEETs that were withdrawn.
     event AdminWithdraw(address indexed recipient, uint256[] sheetIds);
+
+    /// @notice Emitted when the owner pauses the claim process.
+    event Pause();
+
+    /// @notice Emitted when the owner unpauses the claim process.
+    event Unpause();
 
     /// @notice Emitted when the transition Merkle root is set.
     /// @param newTransitionMerkleRoot The new transition Merkle root.
@@ -118,6 +125,7 @@ contract SpreadSheet is Ownable {
         bytes32[][] calldata proofs
     )
         external
+        whenNotPaused
     {
         if (sheetIdsToClaim.length != botsIdsToBurn.length || sheetIdsToClaim.length != proofs.length) {
             revert SpreadSheet__MismatchedArrays();
@@ -155,6 +163,7 @@ contract SpreadSheet is Ownable {
         bytes32[][] calldata proofs
     )
         external
+        whenNotPaused
     {
         if (sheetIdsToClaim.length != proofs.length) {
             revert SpreadSheet__MismatchedArrays();
@@ -189,11 +198,33 @@ contract SpreadSheet is Ownable {
     ///
     /// @param recipient The address to withdraw to.
     /// @param sheetIds The IDs of the SHEETs to withdraw.
-    function adminWithdraw(address recipient, uint256[] calldata sheetIds) external onlyOwner {
+    function adminWithdraw(address recipient, uint256[] calldata sheetIds) external onlyOwner whenPaused {
         for (uint256 i = 0; i < sheetIds.length; i++) {
             sheetNFT.transferFrom({ from: address(this), to: recipient, tokenId: sheetIds[i] });
         }
         emit AdminWithdraw({ recipient: recipient, sheetIds: sheetIds });
+    }
+
+    /// @notice Pause the claim process.
+    ///
+    /// @dev Emits a {Pause} event.
+    ///
+    /// Requirements:
+    /// - The caller must be the owner.
+    ///
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// @notice Unpause the claim process.
+    ///
+    /// @dev Emits an {Unpause} event.
+    ///
+    /// Requirements:
+    /// - The caller must be the owner.
+    ///
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     /// @notice Set the Merkle root of the SHEET allocation Merkle tree.
