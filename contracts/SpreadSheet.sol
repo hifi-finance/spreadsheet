@@ -214,6 +214,7 @@ contract SpreadSheet is Ownable, Pausable {
     ///
     function pause() external onlyOwner {
         _pause();
+        emit Pause();
     }
 
     /// @notice Unpause the claim process.
@@ -225,6 +226,7 @@ contract SpreadSheet is Ownable, Pausable {
     ///
     function unpause() external onlyOwner {
         _unpause();
+        emit Unpause();
     }
 
     /// @notice Set the Merkle root of the SHEET allocation Merkle tree.
