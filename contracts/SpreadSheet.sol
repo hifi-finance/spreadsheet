@@ -156,18 +156,15 @@ contract SpreadSheet is Ownable, Pausable {
     ///
     /// @param sheetIdsToClaim The IDs of the SHEETs to claim.
     /// @param totalAllocated The total number of SHEETs allocated to the caller.
-    /// @param proofs The Merkle proofs for verifying claims.
+    /// @param proof The Merkle proof for verifying claim.
     function claimSheetsViaAllocation(
         uint256[] calldata sheetIdsToClaim,
         uint256 totalAllocated,
-        bytes32[][] calldata proofs
+        bytes32[] calldata proof
     )
         external
         whenNotPaused
     {
-        if (sheetIdsToClaim.length != proofs.length) {
-            revert SpreadSheet__MismatchedArrays();
-        }
         if (sheetIdsToClaim.length == 0) {
             revert SpreadSheet__ZeroClaim();
         }
@@ -175,11 +172,11 @@ contract SpreadSheet is Ownable, Pausable {
             revert SpreadSheet__AllocationExceeded();
         }
         totalClaimedByAllocatee[msg.sender] += sheetIdsToClaim.length;
+        bytes32 node = keccak256(abi.encodePacked(msg.sender, totalAllocated));
+        if (!MerkleProof.verify(proof, allocationMerkleRoot, node)) {
+            revert SpreadSheet__InvalidProof();
+        }
         for (uint256 i = 0; i < sheetIdsToClaim.length; i++) {
-            bytes32 node = keccak256(abi.encodePacked(msg.sender, totalAllocated));
-            if (!MerkleProof.verify(proofs[i], allocationMerkleRoot, node)) {
-                revert SpreadSheet__InvalidProof();
-            }
             sheetNFT.transferFrom({ from: address(this), to: msg.sender, tokenId: sheetIdsToClaim[i] });
         }
         emit ClaimedSheetsViaAllocation({
