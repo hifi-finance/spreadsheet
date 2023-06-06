@@ -130,9 +130,9 @@ Specific tests can be run using `forge test` conventions, specified in more deta
 
 ### Deploy Commands
 
-| Command       | Description      |
-| ------------- | ---------------- |
-| `make deploy` | Deploy to Anvil. |
+| Command       | Description                                                                       |
+| ------------- | --------------------------------------------------------------------------------- |
+| `make deploy` | Deploy contract (e.g. `make deploy sheet=0x123... bots=0x123... network=mainnet`) |
 
 For instructions on how to deploy to a testnet or mainnet, check out the
 [Solidity Scripting tutorial](https://book.getfoundry.sh/tutorials/solidity-scripting.html).

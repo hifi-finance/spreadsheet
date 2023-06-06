@@ -22,7 +22,12 @@ coverage::
 	@forge coverage
 
 deploy::
-	@forge script script/Foo.s.sol --broadcast --fork-url http://localhost:8545
+	@forge script script/deploy/SpreadSheet.s.sol\
+		--broadcast\
+		--rpc-url $(network)\
+		--sig "run(address,address)"\
+		$(sheet)\
+		$(bots)\
 
 fmt-check::
 	@forge fmt --check
