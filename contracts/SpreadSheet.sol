@@ -138,7 +138,7 @@ contract SpreadSheet is Ownable, Pausable {
             if (!MerkleProof.verify(proofs[i], transitionMerkleRoot, node)) {
                 revert SpreadSheet__InvalidProof();
             }
-            botsNFT.transferFrom({ from: msg.sender, to: address(0), tokenId: botsIdsToBurn[i] });
+            botsNFT.transferFrom({ from: msg.sender, to: address(0xdead), tokenId: botsIdsToBurn[i] });
             sheetNFT.transferFrom({ from: address(this), to: msg.sender, tokenId: sheetIdsToClaim[i] });
         }
         emit ClaimedSheetsViaTransition({ allocatee: msg.sender, sheetIds: sheetIdsToClaim, botsIds: botsIdsToBurn });
