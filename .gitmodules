@@ -5,3 +5,7 @@
 	path = modules/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
 	branch = v4.8.3
+[submodule "modules/murky"]
+	path = modules/murky
+	url = https://github.com/dmfxyz/murky
+	branch = main

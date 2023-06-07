@@ -35,6 +35,12 @@ fmt-check::
 fmt-write::
 	@forge fmt
 
+generate-allocation-merkle-tree::
+	@sh .shell/generate-allocation-merkle-tree.sh $(csv_file)
+
+generate-transition-merkle-tree::
+	@sh .shell/generate-transition-merkle-tree.sh $(csv_file)
+
 gas-report::
 	@forge test --gas-report
 
