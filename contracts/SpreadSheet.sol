@@ -26,10 +26,28 @@ contract SpreadSheet is Ownable, Pausable {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @notice Thrown when the number of SHEETs an allocatee is trying to claim exceeds their allocation.
-    error SpreadSheet__AllocationExceeded();
+    ///
+    /// @param allocatee The account that is trying to claim SHEETs.
+    /// @param allocation The total number of SHEETs allocated to the allocatee.
+    /// @param totalClaimedAfter The total number of SHEETs the allocatee is trying to have after claiming.
+    error SpreadSheet__AllocationExceeded(address allocatee, uint256 allocation, uint256 totalClaimedAfter);
 
-    /// @notice Thrown when the provided Merkle proof is invalid.
-    error SpreadSheet__InvalidProof();
+    /// @notice Thrown when the provided transition Merkle proof is invalid.
+    ///
+    /// @param sheetId The ID of the SHEET linked with the provided proof.
+    /// @param botsId The ID of the BOT linked with the provided proof.
+    error SpreadSheet__InvalidTransitionProof(uint256 sheetId, uint256 botsId);
+
+    /// @notice Thrown when the provided allocation Merkle proof is invalid.
+    ///
+    /// @param allocatee The allocatee account linked with the provided proof.
+    /// @param allocation The allocation amount linked with the provided proof.
+    error SpreadSheet__InvalidAllocationProof(address allocatee, uint256 allocation);
+
+    /// @notice Thrown when the provided allocation reserve Merkle proof is invalid.
+    ///
+    /// @param sheetId The ID of the SHEET linked with the provided proof.
+    error SpreadSheet__InvalidAllocationReserveProof(uint256 sheetId);
 
     /// @notice Thrown when the provided arrays are not the same length.
     error SpreadSheet__MismatchedArrays();
@@ -42,16 +60,16 @@ contract SpreadSheet is Ownable, Pausable {
     //////////////////////////////////////////////////////////////////////////*/
 
     /// @notice Emitted when claiming SHEETs in exchange for burning BOTS.
-    /// @param allocatee The account that claimed the SHEETs.
+    /// @param claimer The account that claimed the SHEETs.
     /// @param sheetIds The IDs of the SHEETs that were claimed.
     /// @param botsIds The IDs of the BOTS that were burned.
-    event ClaimedSheetsViaTransition(address indexed allocatee, uint256[] sheetIds, uint256[] botsIds);
+    event ClaimSheetsViaTransition(address indexed claimer, uint256[] sheetIds, uint256[] botsIds);
 
     /// @notice Emitted when claiming SHEETs that were allocated to the caller account.
-    /// @param allocatee The account that claimed the SHEETs.
+    /// @param claimer The account that claimed the SHEETs.
     /// @param sheetIds The IDs of the SHEETs that were claimed.
-    /// @param totalAllocated The total number of SHEETs allocated to the caller.
-    event ClaimedSheetsViaAllocation(address indexed allocatee, uint256[] sheetIds, uint256 totalAllocated);
+    /// @param allocation The total number of SHEETs allocated to the caller.
+    event ClaimSheetsViaAllocation(address indexed claimer, uint256[] sheetIds, uint256 allocation);
 
     /// @notice Emitted when the owner withdraws SHEETs from the contract.
     /// @param recipient The account that received the SHEETs.
@@ -59,10 +77,10 @@ contract SpreadSheet is Ownable, Pausable {
     event AdminWithdraw(address indexed recipient, uint256[] sheetIds);
 
     /// @notice Emitted when the owner pauses the claim process.
-    event Pause();
+    event PauseClaims();
 
     /// @notice Emitted when the owner unpauses the claim process.
-    event Unpause();
+    event UnpauseClaims();
 
     /// @notice Emitted when the transition Merkle root is set.
     /// @param newTransitionMerkleRoot The new transition Merkle root.
@@ -71,6 +89,10 @@ contract SpreadSheet is Ownable, Pausable {
     /// @notice Emitted when the allocation Merkle root is set.
     /// @param newAllocationMerkleRoot The new allocation Merkle root.
     event SetAllocationMerkleRoot(bytes32 newAllocationMerkleRoot);
+
+    /// @notice Emitted when the allocation reserve Merkle root is set.
+    /// @param newAllocationReserveMerkleRoot The new allocation reserve Merkle root.
+    event SetAllocationReserveMerkleRoot(bytes32 newAllocationReserveMerkleRoot);
 
     /*//////////////////////////////////////////////////////////////////////////
                                    PUBLIC STORAGE
@@ -88,8 +110,11 @@ contract SpreadSheet is Ownable, Pausable {
     /// @notice The Merkle root of the SHEET allocation Merkle tree.
     bytes32 public allocationMerkleRoot;
 
+    /// @notice The Merkle root of the SHEET allocation reserve Merkle tree.
+    bytes32 public allocationReserveMerkleRoot;
+
     /// @notice The total number of SHEETs claimed by an allocatee.
-    mapping(address => uint256) public totalClaimedByAllocatee;
+    mapping(address => uint256) public totalClaimed;
 
     /*//////////////////////////////////////////////////////////////////////////
                                     CONSTRUCTOR
@@ -108,82 +133,108 @@ contract SpreadSheet is Ownable, Pausable {
 
     /// @notice Claim SHEETs in exchange for burning BOTS.
     ///
-    /// @dev Emits a {ClaimedSheetsViaTransition} event.
+    /// @dev Emits a {ClaimSheetsViaTransition} event.
     ///
     /// Requirements:
     /// - All provided arrays must be the same length.
     /// - The number of SHEETs to claim must be greater than 0.
-    /// - Each provided Merkle proof of a SHEET ID being linked to a corresponding BOTS ID must be valid.
+    /// - Each provided transition Merkle proof must be valid.
     /// - The caller must own all of the BOTS IDs to burn.
     ///
     /// @param sheetIdsToClaim The IDs of the SHEETs to claim.
     /// @param botsIdsToBurn The IDs of the BOTS to burn.
-    /// @param proofs The Merkle proofs for verifying claims.
+    /// @param transitionProofs The Merkle proofs for verifying transition claims.
     function claimSheetsViaTransition(
         uint256[] calldata sheetIdsToClaim,
         uint256[] calldata botsIdsToBurn,
-        bytes32[][] calldata proofs
+        bytes32[][] calldata transitionProofs
     )
         external
         whenNotPaused
     {
-        if (sheetIdsToClaim.length != botsIdsToBurn.length || sheetIdsToClaim.length != proofs.length) {
+        if (sheetIdsToClaim.length != botsIdsToBurn.length || sheetIdsToClaim.length != transitionProofs.length) {
             revert SpreadSheet__MismatchedArrays();
         }
         if (sheetIdsToClaim.length == 0) {
             revert SpreadSheet__ZeroClaim();
         }
         for (uint256 i = 0; i < sheetIdsToClaim.length; i++) {
-            bytes32 node = keccak256(abi.encodePacked(botsIdsToBurn[i], sheetIdsToClaim[i]));
-            if (!MerkleProof.verify(proofs[i], transitionMerkleRoot, node)) {
-                revert SpreadSheet__InvalidProof();
+            if (
+                !MerkleProof.verify({
+                    proof: transitionProofs[i],
+                    root: transitionMerkleRoot,
+                    leaf: keccak256(abi.encodePacked(botsIdsToBurn[i], sheetIdsToClaim[i]))
+                })
+            ) {
+                revert SpreadSheet__InvalidTransitionProof({ sheetId: sheetIdsToClaim[i], botsId: botsIdsToBurn[i] });
             }
             botsNFT.transferFrom({ from: msg.sender, to: address(0xdead), tokenId: botsIdsToBurn[i] });
             sheetNFT.transferFrom({ from: address(this), to: msg.sender, tokenId: sheetIdsToClaim[i] });
         }
-        emit ClaimedSheetsViaTransition({ allocatee: msg.sender, sheetIds: sheetIdsToClaim, botsIds: botsIdsToBurn });
+        emit ClaimSheetsViaTransition({ claimer: msg.sender, sheetIds: sheetIdsToClaim, botsIds: botsIdsToBurn });
     }
 
     /// @notice Claim SHEETs that were allocated to the caller account.
     ///
-    /// @dev Emits a {ClaimedSheetsViaAllocation} event.
+    /// @dev Emits a {ClaimSheetsViaAllocation} event.
     ///
     /// Requirements:
     /// - All provided arrays must be the same length.
     /// - The number of SHEETs to claim must be greater than 0.
+    /// - The provided allocation Merkle proof must be valid.
     /// - The number of SHEETs to claim must not exceed the number of SHEETs allocated to the caller account.
-    /// - Each provided Merkle proof must be valid.
+    /// - Each provided allocation reserve Merkle proof must be valid.
     ///
     /// @param sheetIdsToClaim The IDs of the SHEETs to claim.
-    /// @param totalAllocated The total number of SHEETs allocated to the caller.
-    /// @param proof The Merkle proof for verifying claim.
+    /// @param allocation The total number of SHEETs allocated to the caller.
+    /// @param allocationProof The Merkle proof for verifying the allocation claim.
+    /// @param allocationReserveProofs The Merkle proofs for verifying allocation reserve claims.
     function claimSheetsViaAllocation(
         uint256[] calldata sheetIdsToClaim,
-        uint256 totalAllocated,
-        bytes32[] calldata proof
+        uint256 allocation,
+        bytes32[] calldata allocationProof,
+        bytes32[][] calldata allocationReserveProofs
     )
         external
         whenNotPaused
     {
+        if (sheetIdsToClaim.length != allocationReserveProofs.length) {
+            revert SpreadSheet__MismatchedArrays();
+        }
         if (sheetIdsToClaim.length == 0) {
             revert SpreadSheet__ZeroClaim();
         }
-        if (sheetIdsToClaim.length > totalAllocated - totalClaimedByAllocatee[msg.sender]) {
-            revert SpreadSheet__AllocationExceeded();
+        if (
+            !MerkleProof.verify({
+                proof: allocationProof,
+                root: allocationMerkleRoot,
+                leaf: keccak256(abi.encodePacked(msg.sender, allocation))
+            })
+        ) {
+            revert SpreadSheet__InvalidAllocationProof({ allocatee: msg.sender, allocation: allocation });
         }
-        totalClaimedByAllocatee[msg.sender] += sheetIdsToClaim.length;
-        bytes32 node = keccak256(abi.encodePacked(msg.sender, totalAllocated));
-        if (!MerkleProof.verify(proof, allocationMerkleRoot, node)) {
-            revert SpreadSheet__InvalidProof();
+        uint256 totalClaimedAfter = sheetIdsToClaim.length + totalClaimed[msg.sender];
+        if (totalClaimedAfter > allocation) {
+            revert SpreadSheet__AllocationExceeded({
+                allocatee: msg.sender,
+                allocation: allocation,
+                totalClaimedAfter: totalClaimedAfter
+            });
         }
+        totalClaimed[msg.sender] = totalClaimedAfter;
         for (uint256 i = 0; i < sheetIdsToClaim.length; i++) {
+            if (
+                !MerkleProof.verify({
+                    proof: allocationReserveProofs[i],
+                    root: allocationReserveMerkleRoot,
+                    leaf: keccak256(abi.encodePacked(sheetIdsToClaim[i]))
+                })
+            ) {
+                revert SpreadSheet__InvalidAllocationReserveProof(sheetIdsToClaim[i]);
+            }
             sheetNFT.transferFrom({ from: address(this), to: msg.sender, tokenId: sheetIdsToClaim[i] });
         }
-        emit ClaimedSheetsViaAllocation({
-            allocatee: msg.sender,
-            sheetIds: sheetIdsToClaim,
-            totalAllocated: totalAllocated
-        });
+        emit ClaimSheetsViaAllocation({ claimer: msg.sender, sheetIds: sheetIdsToClaim, allocation: allocation });
     }
 
     /// @notice Withdraw SHEETs from the contract.
@@ -204,29 +255,29 @@ contract SpreadSheet is Ownable, Pausable {
 
     /// @notice Pause the claim process.
     ///
-    /// @dev Emits a {Pause} event.
+    /// @dev Emits a {PauseClaims} event.
     ///
     /// Requirements:
     /// - The caller must be the owner.
     ///
-    function pause() external onlyOwner {
+    function pauseClaims() external onlyOwner {
         _pause();
-        emit Pause();
+        emit PauseClaims();
     }
 
     /// @notice Unpause the claim process.
     ///
-    /// @dev Emits an {Unpause} event.
+    /// @dev Emits an {UnpauseClaims} event.
     ///
     /// Requirements:
     /// - The caller must be the owner.
     ///
-    function unpause() external onlyOwner {
+    function unpauseClaims() external onlyOwner {
         _unpause();
-        emit Unpause();
+        emit UnpauseClaims();
     }
 
-    /// @notice Set the Merkle root of the SHEET allocation Merkle tree.
+    /// @notice Set the Merkle root of the BOTS -> SHEET transition Merkle tree.
     ///
     /// @dev Emits a {SetTransitionMerkleRoot} event.
     ///
@@ -239,7 +290,7 @@ contract SpreadSheet is Ownable, Pausable {
         emit SetTransitionMerkleRoot(newTransitionMerkleRoot);
     }
 
-    /// @notice Set the Merkle root of the BOTS -> SHEET transition Merkle tree.
+    /// @notice Set the Merkle root of the SHEET allocation Merkle tree.
     ///
     /// @dev Emits a {SetAllocationMerkleRoot} event.
     ///
@@ -250,5 +301,18 @@ contract SpreadSheet is Ownable, Pausable {
     function setAllocationMerkleRoot(bytes32 newAllocationMerkleRoot) external onlyOwner {
         allocationMerkleRoot = newAllocationMerkleRoot;
         emit SetAllocationMerkleRoot(newAllocationMerkleRoot);
+    }
+
+    /// @notice Set the Merkle root of the SHEET allocation reserve Merkle tree.
+    ///
+    /// @dev Emits a {SetAllocationReserveMerkleRoot} event.
+    ///
+    /// Requirements:
+    /// - The caller must be the owner.
+    ///
+    /// @param newAllocationReserveMerkleRoot The new allocation reserve Merkle root.
+    function setAllocationReserveMerkleRoot(bytes32 newAllocationReserveMerkleRoot) external onlyOwner {
+        allocationReserveMerkleRoot = newAllocationReserveMerkleRoot;
+        emit SetAllocationReserveMerkleRoot(newAllocationReserveMerkleRoot);
     }
 }
