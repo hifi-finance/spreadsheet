@@ -9,8 +9,8 @@ import { BaseScript } from "../Base.s.sol";
 contract AllocationMerkleTree is BaseScript {
     Merkle internal immutable tree = new Merkle();
 
-    /// @param allocatees The accounts to be allocated.
-    /// @param allocations The allocation amounts for each account.
+    /// @param allocatees The accounts to be allocated SHEETs.
+    /// @param allocations The amount of SHEETs to be allocated to each account.
     /// @return root The root of the Merkle tree.
     /// @return proofs The proofs for each leaf in the Merkle tree.
     function run(

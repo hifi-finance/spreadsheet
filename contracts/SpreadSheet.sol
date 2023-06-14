@@ -25,7 +25,7 @@ contract SpreadSheet is Ownable, Pausable {
                                        ERRORS
     //////////////////////////////////////////////////////////////////////////*/
 
-    /// @notice Thrown when the number of SHEETs an allocatee is trying to claim exceeds their allocation.
+    /// @notice Thrown when the number of SHEETs an allocatee is trying to claim exceeds their allocation amount.
     ///
     /// @param allocatee The account that is trying to claim SHEETs.
     /// @param allocation The total number of SHEETs allocated to the allocatee.
@@ -49,8 +49,8 @@ contract SpreadSheet is Ownable, Pausable {
     /// @param sheetId The ID of the SHEET linked with the provided proof.
     error SpreadSheet__InvalidAllocationReserveProof(uint256 sheetId);
 
-    /// @notice Thrown when the provided arrays are not the same length.
-    error SpreadSheet__MismatchedArrays();
+    /// @notice Thrown when the provided inputs are not of the same length.
+    error SpreadSheet__MismatchedInputs();
 
     /// @notice Thrown when the caller is trying to claim 0 SHEETs.
     error SpreadSheet__ZeroClaim();
@@ -136,7 +136,7 @@ contract SpreadSheet is Ownable, Pausable {
     /// @dev Emits a {ClaimSheetsViaTransition} event.
     ///
     /// Requirements:
-    /// - All provided arrays must be the same length.
+    /// - All provided inputs must be the same length.
     /// - The number of SHEETs to claim must be greater than 0.
     /// - Each provided transition Merkle proof must be valid.
     /// - The caller must own all of the BOTS IDs to burn.
@@ -153,7 +153,7 @@ contract SpreadSheet is Ownable, Pausable {
         whenNotPaused
     {
         if (sheetIdsToClaim.length != botsIdsToBurn.length || sheetIdsToClaim.length != transitionProofs.length) {
-            revert SpreadSheet__MismatchedArrays();
+            revert SpreadSheet__MismatchedInputs();
         }
         if (sheetIdsToClaim.length == 0) {
             revert SpreadSheet__ZeroClaim();
@@ -179,7 +179,7 @@ contract SpreadSheet is Ownable, Pausable {
     /// @dev Emits a {ClaimSheetsViaAllocation} event.
     ///
     /// Requirements:
-    /// - All provided arrays must be the same length.
+    /// - All provided inputs must be the same length.
     /// - The number of SHEETs to claim must be greater than 0.
     /// - The provided allocation Merkle proof must be valid.
     /// - The number of SHEETs to claim must not exceed the number of SHEETs allocated to the caller account.
@@ -199,7 +199,7 @@ contract SpreadSheet is Ownable, Pausable {
         whenNotPaused
     {
         if (sheetIdsToClaim.length != allocationReserveProofs.length) {
-            revert SpreadSheet__MismatchedArrays();
+            revert SpreadSheet__MismatchedInputs();
         }
         if (sheetIdsToClaim.length == 0) {
             revert SpreadSheet__ZeroClaim();
