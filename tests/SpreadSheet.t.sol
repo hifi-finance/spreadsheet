@@ -20,7 +20,7 @@ contract SpreadSheetTest is Test {
         // Deploy the base test contracts.
         sheets = new ERC721Mint("SheetHeads", "SHEET");
         bots = new ERC721Mint("Pawn Bots", "BOTS");
-        spreadSheet = new SpreadSheet(sheets, bots);
+        spreadSheet = new SpreadSheet(sheets, bots, 0);
     }
 
     function testClaimSheetsViaTransition() public {

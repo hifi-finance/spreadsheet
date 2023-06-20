@@ -22,5 +22,4 @@ out-json/
 # Merkle data
 in-csv/**
 !/in-csv/allocation-merkle-data.csv.example
-!/in-csv/allocation-reserve-merkle-data.csv.example
 !/in-csv/transition-merkle-data.csv.example

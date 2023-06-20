@@ -47,7 +47,7 @@ out_allocatees=$(cat $temp_file | head -n 3 | tail -n 1)
 rm $temp_file
 
 # Run the Forge script and extract the Merkle proofs from stdout
-output=$(forge script script/generate/AllocationMerkleTree.s.sol \
+output=$(forge script scripts/generate/AllocationMerkleTree.s.sol \
   --sig "run(address[],uint256[])" \
   "$arg_allocatees" \
   "$arg_allocations")

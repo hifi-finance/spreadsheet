@@ -8,6 +8,6 @@ import "../Base.s.sol";
 
 contract SpreadSheetScript is BaseScript {
     function run(IERC721 sheetNFT, IERC721 botsNFT) public virtual broadcaster returns (SpreadSheet spreadSheet) {
-        spreadSheet = new SpreadSheet(sheetNFT, botsNFT);
+        spreadSheet = new SpreadSheet(sheetNFT, botsNFT, 0);
     }
 }

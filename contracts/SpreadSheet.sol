@@ -44,10 +44,10 @@ contract SpreadSheet is Ownable, Pausable {
     /// @param allocation The allocation amount linked with the provided proof.
     error SpreadSheet__InvalidAllocationProof(address allocatee, uint256 allocation);
 
-    /// @notice Thrown when the provided allocation reserve Merkle proof is invalid.
+    /// @notice Thrown when the provided allocation sheet ID is invalid.
     ///
-    /// @param sheetId The ID of the SHEET linked with the provided proof.
-    error SpreadSheet__InvalidAllocationReserveProof(uint256 sheetId);
+    /// @param sheetId The provided allocation sheet ID.
+    error SpreadSheet__InvalidAllocationSheetId(uint256 sheetId);
 
     /// @notice Thrown when the provided inputs are not of the same length.
     error SpreadSheet__MismatchedInputs();
@@ -90,10 +90,6 @@ contract SpreadSheet is Ownable, Pausable {
     /// @param newAllocationMerkleRoot The new allocation Merkle root.
     event SetAllocationMerkleRoot(bytes32 newAllocationMerkleRoot);
 
-    /// @notice Emitted when the allocation reserve Merkle root is set.
-    /// @param newAllocationReserveMerkleRoot The new allocation reserve Merkle root.
-    event SetAllocationReserveMerkleRoot(bytes32 newAllocationReserveMerkleRoot);
-
     /*//////////////////////////////////////////////////////////////////////////
                                    PUBLIC STORAGE
     //////////////////////////////////////////////////////////////////////////*/
@@ -104,14 +100,15 @@ contract SpreadSheet is Ownable, Pausable {
     /// @notice The Pawn Bots NFT contract whose tokens are to be burned.
     IERC721 public immutable botsNFT;
 
+    /// @notice The ID of the first SHEET to be allocated.
+    /// @dev Allocated IDs are contiguous.
+    uint256 public immutable allocationSheetIdStart;
+
     /// @notice The Merkle root of the BOTS -> SHEET transition Merkle tree.
     bytes32 public transitionMerkleRoot;
 
     /// @notice The Merkle root of the SHEET allocation Merkle tree.
     bytes32 public allocationMerkleRoot;
-
-    /// @notice The Merkle root of the SHEET allocation reserve Merkle tree.
-    bytes32 public allocationReserveMerkleRoot;
 
     /// @notice The total number of SHEETs claimed by an allocatee.
     mapping(address => uint256) public totalClaimed;
@@ -122,9 +119,11 @@ contract SpreadSheet is Ownable, Pausable {
 
     /// @param _sheetNFT The Sheetheads NFT contract whose tokens are to be distributed.
     /// @param _botsNFT The Pawn Bots NFT contract whose tokens are to be burned.
-    constructor(IERC721 _sheetNFT, IERC721 _botsNFT) {
+    /// @param _allocationSheetIdStart The ID of the first SHEET to be allocated.
+    constructor(IERC721 _sheetNFT, IERC721 _botsNFT, uint256 _allocationSheetIdStart) {
         sheetNFT = _sheetNFT;
         botsNFT = _botsNFT;
+        allocationSheetIdStart = _allocationSheetIdStart;
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -188,19 +187,14 @@ contract SpreadSheet is Ownable, Pausable {
     /// @param sheetIdsToClaim The IDs of the SHEETs to claim.
     /// @param allocation The total number of SHEETs allocated to the caller.
     /// @param allocationProof The Merkle proof for verifying the allocation claim.
-    /// @param allocationReserveProofs The Merkle proofs for verifying allocation reserve claims.
     function claimSheetsViaAllocation(
         uint256[] calldata sheetIdsToClaim,
         uint256 allocation,
-        bytes32[] calldata allocationProof,
-        bytes32[][] calldata allocationReserveProofs
+        bytes32[] calldata allocationProof
     )
         external
         whenNotPaused
     {
-        if (sheetIdsToClaim.length != allocationReserveProofs.length) {
-            revert SpreadSheet__MismatchedInputs();
-        }
         if (sheetIdsToClaim.length == 0) {
             revert SpreadSheet__ZeroClaim();
         }
@@ -223,14 +217,8 @@ contract SpreadSheet is Ownable, Pausable {
         }
         totalClaimed[msg.sender] = totalClaimedAfter;
         for (uint256 i = 0; i < sheetIdsToClaim.length; i++) {
-            if (
-                !MerkleProof.verify({
-                    proof: allocationReserveProofs[i],
-                    root: allocationReserveMerkleRoot,
-                    leaf: keccak256(abi.encodePacked(sheetIdsToClaim[i]))
-                })
-            ) {
-                revert SpreadSheet__InvalidAllocationReserveProof(sheetIdsToClaim[i]);
+            if (sheetIdsToClaim[i] < allocationSheetIdStart) {
+                revert SpreadSheet__InvalidAllocationSheetId(sheetIdsToClaim[i]);
             }
             sheetNFT.transferFrom({ from: address(this), to: msg.sender, tokenId: sheetIdsToClaim[i] });
         }
@@ -301,18 +289,5 @@ contract SpreadSheet is Ownable, Pausable {
     function setAllocationMerkleRoot(bytes32 newAllocationMerkleRoot) external onlyOwner {
         allocationMerkleRoot = newAllocationMerkleRoot;
         emit SetAllocationMerkleRoot(newAllocationMerkleRoot);
-    }
-
-    /// @notice Set the Merkle root of the SHEET allocation reserve Merkle tree.
-    ///
-    /// @dev Emits a {SetAllocationReserveMerkleRoot} event.
-    ///
-    /// Requirements:
-    /// - The caller must be the owner.
-    ///
-    /// @param newAllocationReserveMerkleRoot The new allocation reserve Merkle root.
-    function setAllocationReserveMerkleRoot(bytes32 newAllocationReserveMerkleRoot) external onlyOwner {
-        allocationReserveMerkleRoot = newAllocationReserveMerkleRoot;
-        emit SetAllocationReserveMerkleRoot(newAllocationReserveMerkleRoot);
     }
 }

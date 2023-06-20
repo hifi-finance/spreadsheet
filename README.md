@@ -120,11 +120,11 @@ To make it easier to perform some tasks within the repo, a few commands are avai
 
 ### Test Commands
 
-| Command           | Description                       |
-| ----------------- | --------------------------------- |
-| `make coverage`   | Get a test coverage report.       |
-| `make test`       | Run all tests located in `test/`. |
-| `make gas-report` | Get a gas report.                 |
+| Command           | Description                        |
+| ----------------- | ---------------------------------- |
+| `make coverage`   | Get a test coverage report.        |
+| `make test`       | Run all tests located in `tests/`. |
+| `make gas-report` | Get a gas report.                  |
 
 Specific tests can be run using `forge test` conventions, specified in more detail in the Foundry [Book](https://book.getfoundry.sh/reference/forge/forge-test#test-options).
 

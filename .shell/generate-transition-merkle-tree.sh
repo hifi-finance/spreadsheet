@@ -41,7 +41,7 @@ arg_sheet_ids=$(cat $temp_file | head -n 2 | tail -n 1)
 rm $temp_file
 
 # Run the Forge script and extract the Merkle proofs from stdout
-output=$(forge script script/generate/TransitionMerkleTree.s.sol \
+output=$(forge script scripts/generate/TransitionMerkleTree.s.sol \
   --sig "run(uint256[],uint256[])" \
   "$arg_bots_ids" \
   "$arg_sheet_ids")

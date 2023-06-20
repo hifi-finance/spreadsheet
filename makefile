@@ -22,7 +22,7 @@ coverage::
 	@forge coverage
 
 deploy::
-	@forge script script/deploy/SpreadSheet.s.sol\
+	@forge script scripts/deploy/SpreadSheet.s.sol\
 		--broadcast\
 		--verify\
 		--rpc-url $(network)\
@@ -38,9 +38,6 @@ fmt-write::
 
 generate-allocation-merkle-tree::
 	@sh .shell/generate-allocation-merkle-tree.sh $(csv_file)
-
-generate-allocation-reserve-merkle-tree::
-	@sh .shell/generate-allocation-reserve-merkle-tree.sh $(csv_file)
 
 generate-transition-merkle-tree::
 	@sh .shell/generate-transition-merkle-tree.sh $(csv_file)
