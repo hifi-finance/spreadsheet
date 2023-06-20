@@ -16,6 +16,9 @@ cache/
 # Temporary files
 **/tmp/
 
+# Output directories
+out-json/
+
 # Merkle data
 in-csv/**
 !/in-csv/allocation-merkle-data.csv.example

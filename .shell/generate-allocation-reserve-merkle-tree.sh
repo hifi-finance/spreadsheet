@@ -34,7 +34,26 @@ temp_file=$(mktemp)
 arg_sheet_ids=$(cat $temp_file | head -n 1)
 rm $temp_file
 
-# Run the Forge script and extract the SVG from stdout
-forge script script/generate/AllocationReserveMerkleTree.s.sol \
+# Run the Forge script and extract the Merkle proofs from stdout
+output=$(forge script script/generate/AllocationReserveMerkleTree.s.sol \
   --sig "run(uint256[])" \
-  "$arg_sheet_ids"
+  "$arg_sheet_ids")
+
+# Reformat the Merkle proofs into JSON format and write to a file
+index=0
+temp_file=$(mktemp)
+first_iteration=1
+echo "$output" | awk -F "proofs: string[[]] " '{print $2}' | awk 'NF > 0' | jq -c ".[]" | while read line; do
+    sheet_id=$(echo $arg_sheet_ids | jq -c ".[${index}]")
+    element="{\"$sheet_id\":{\"merkleProof\":$line}}"
+    if [ "$first_iteration" -eq 1 ]; then
+      echo "$element" >> $temp_file
+      first_iteration=0
+    else
+      echo ",$element" >> $temp_file
+    fi
+    index=$((index+1))
+done
+mkdir -p "out-json"
+echo "[$(cat $temp_file)]" > "out-json/allocation-reserve-merkle-tree.json"
+rm $temp_file
