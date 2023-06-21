@@ -130,6 +130,40 @@ contract SpreadSheet is Ownable, Pausable {
                                NON-CONSTANT FUNCTIONS
     //////////////////////////////////////////////////////////////////////////*/
 
+    /// @notice Claim SHEETs in exchange for burning BOTS and/or claiming SHEETs that were allocated to the caller.
+    ///
+    /// @param sheetIdsToClaimViaTransition The IDs of the SHEETs to claim via transition.
+    /// @param sheetIdsToClaimViaAllocation The IDs of the SHEETs to claim via allocation.
+    /// @param botsIdsToBurnViaTransition The IDs of the BOTS to burn via transition.
+    /// @param allocationAmount The total number of SHEETs allocated to the caller.
+    /// @param transitionProofs The Merkle proofs for verifying transition claims.
+    /// @param allocationProof The Merkle proof for verifying the allocation claim.
+    function claimSheets(
+        uint256[] calldata sheetIdsToClaimViaTransition,
+        uint256[] calldata sheetIdsToClaimViaAllocation,
+        uint256[] calldata botsIdsToBurnViaTransition,
+        uint256 allocationAmount,
+        bytes32[][] calldata transitionProofs,
+        bytes32[] calldata allocationProof
+    )
+        external
+    {
+        if (sheetIdsToClaimViaTransition.length > 0) {
+            claimSheetsViaTransition({
+                sheetIdsToClaim: sheetIdsToClaimViaTransition,
+                botsIdsToBurn: botsIdsToBurnViaTransition,
+                transitionProofs: transitionProofs
+            });
+        }
+        if (sheetIdsToClaimViaAllocation.length > 0) {
+            claimSheetsViaAllocation({
+                sheetIdsToClaim: sheetIdsToClaimViaAllocation,
+                allocation: allocationAmount,
+                allocationProof: allocationProof
+            });
+        }
+    }
+
     /// @notice Claim SHEETs in exchange for burning BOTS.
     ///
     /// @dev Emits a {ClaimSheetsViaTransition} event.
@@ -148,7 +182,7 @@ contract SpreadSheet is Ownable, Pausable {
         uint256[] calldata botsIdsToBurn,
         bytes32[][] calldata transitionProofs
     )
-        external
+        public
         whenNotPaused
     {
         if (sheetIdsToClaim.length != botsIdsToBurn.length || sheetIdsToClaim.length != transitionProofs.length) {
@@ -192,7 +226,7 @@ contract SpreadSheet is Ownable, Pausable {
         uint256 allocation,
         bytes32[] calldata allocationProof
     )
-        external
+        public
         whenNotPaused
     {
         if (sheetIdsToClaim.length == 0) {
