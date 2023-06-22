@@ -2,3 +2,4 @@
 ds-test/=modules/forge-std/lib/ds-test/src/
 forge-std/=modules/forge-std/src/
 murky/=modules/murky/src/
+erc721a/=modules/ERC721A/contracts/

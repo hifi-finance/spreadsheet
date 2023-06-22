@@ -9,3 +9,7 @@
 	path = modules/murky
 	url = https://github.com/dmfxyz/murky
 	branch = main
+[submodule "modules/ERC721A"]
+	path = modules/ERC721A
+	url = https://github.com/chiru-labs/ERC721A
+	branch = v4.2.3
