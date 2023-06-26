@@ -52,14 +52,18 @@ output=$(forge script scripts/generate/AllocationMerkleTree.s.sol \
   "$arg_allocatees" \
   "$arg_allocations")
 
+# Extract the Merkle root from stdout
+root=$(echo "$output" | awk -F "root: bytes32 " '{print $2}' | awk 'NF > 0')
+
 # Reformat the Merkle proofs into JSON format and write to a file
+root=$(echo "$output" | awk -F "root: bytes32 " '{print $2}' | awk 'NF > 0')
 index=0
 temp_file=$(mktemp)
 first_iteration=1
 echo "$output" | awk -F "proofs: string[[]] " '{print $2}' | awk 'NF > 0' | jq -c ".[]" | while read line; do
     allocatee=$(echo $out_allocatees | jq -c ".[${index}]")
     allocation=$(echo $arg_allocations | jq -c ".[${index}]")
-    element="{$allocatee:{\"allocation\":$allocation,\"merkleProof\":$line}}"
+    element="{\"allocatee\":$allocatee,\"allocation\":$allocation,\"merkleProof\":$line}"
     if [ "$first_iteration" -eq 1 ]; then
       echo "$element" >> $temp_file
       first_iteration=0
@@ -69,5 +73,5 @@ echo "$output" | awk -F "proofs: string[[]] " '{print $2}' | awk 'NF > 0' | jq -
     index=$((index+1))
 done
 mkdir -p "out-json"
-echo "[$(cat $temp_file)]" > "out-json/allocation-merkle-tree.json"
+echo "{\"tree\":[$(cat $temp_file)],\"root\":\"$root\"}" > "out-json/allocation-merkle-tree.json"
 rm $temp_file

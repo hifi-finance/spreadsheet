@@ -46,6 +46,9 @@ output=$(forge script scripts/generate/TransitionMerkleTree.s.sol \
   "$arg_bots_ids" \
   "$arg_sheet_ids")
 
+# Extract the Merkle root from stdout
+root=$(echo "$output" | awk -F "root: bytes32 " '{print $2}' | awk 'NF > 0')
+
 # Reformat the Merkle proofs into JSON format and write to a file
 index=0
 temp_file=$(mktemp)
@@ -53,7 +56,7 @@ first_iteration=1
 echo "$output" | awk -F "proofs: string[[]] " '{print $2}' | awk 'NF > 0' | jq -c ".[]" | while read line; do
     bots_id=$(echo $arg_bots_ids | jq -c ".[${index}]")
     sheet_id=$(echo $arg_sheet_ids | jq -c ".[${index}]")
-    element="{\"$bots_id\":{\"sheet_id\":$sheet_id,\"merkleProof\":$line}}"
+    element="{\"bots_id\":$bots_id,\"sheet_id\":$sheet_id,\"merkleProof\":$line}"
     if [ "$first_iteration" -eq 1 ]; then
       echo "$element" >> $temp_file
       first_iteration=0
@@ -63,5 +66,5 @@ echo "$output" | awk -F "proofs: string[[]] " '{print $2}' | awk 'NF > 0' | jq -
     index=$((index+1))
 done
 mkdir -p "out-json"
-echo "[$(cat $temp_file)]" > "out-json/transition-merkle-tree.json"
+echo "{\"tree\":[$(cat $temp_file)],\"root\":\"$root\"}" > "out-json/transition-merkle-tree.json"
 rm $temp_file
