@@ -46,32 +46,30 @@ arg_allocations=$(cat $temp_file | head -n 2 | tail -n 1)
 out_allocatees=$(cat $temp_file | head -n 3 | tail -n 1)
 rm $temp_file
 
-# Run the Forge script and extract the Merkle proofs from stdout
-output=$(forge script scripts/generate/AllocationMerkleTree.s.sol \
+# Run the Forge script and extract the Merkle tree from stdout
+temp_file=$(mktemp)
+for (( i=0; i<$(wc -l <"$file"); i++ ))
+do
+  output=$(forge script scripts/generate/AllocationMerkleProof.s.sol \
+    --sig "run(address[],uint256[],uint256)" \
+    "$arg_allocatees" \
+    "$arg_allocations" \
+    "$i")
+  proof=$(echo "$output" | awk -F "proof: string " '{print $2}' | awk 'NF > 0')
+  allocatee=$(echo $out_allocatees | jq -c ".[${i}]")
+  allocation=$(echo $arg_allocations | jq -c ".[${i}]")
+  element="{\"allocatee\":$allocatee,\"allocation\":$allocation,\"merkleProof\":$proof}"
+  if [ "$i" -eq 0 ]; then
+    echo "$element" >> $temp_file
+  else
+    echo ",$element" >> $temp_file
+  fi
+done
+output=$(forge script scripts/generate/AllocationMerkleRoot.s.sol \
   --sig "run(address[],uint256[])" \
   "$arg_allocatees" \
   "$arg_allocations")
-
-# Extract the Merkle root from stdout
 root=$(echo "$output" | awk -F "root: bytes32 " '{print $2}' | awk 'NF > 0')
-
-# Reformat the Merkle proofs into JSON format and write to a file
-root=$(echo "$output" | awk -F "root: bytes32 " '{print $2}' | awk 'NF > 0')
-index=0
-temp_file=$(mktemp)
-first_iteration=1
-echo "$output" | awk -F "proofs: string[[]] " '{print $2}' | awk 'NF > 0' | jq -c ".[]" | while read line; do
-    allocatee=$(echo $out_allocatees | jq -c ".[${index}]")
-    allocation=$(echo $arg_allocations | jq -c ".[${index}]")
-    element="{\"allocatee\":$allocatee,\"allocation\":$allocation,\"merkleProof\":$line}"
-    if [ "$first_iteration" -eq 1 ]; then
-      echo "$element" >> $temp_file
-      first_iteration=0
-    else
-      echo ",$element" >> $temp_file
-    fi
-    index=$((index+1))
-done
 mkdir -p "out-json"
 echo "{\"tree\":[$(cat $temp_file)],\"root\":\"$root\"}" > "out-json/allocation-merkle-tree.json"
 rm $temp_file

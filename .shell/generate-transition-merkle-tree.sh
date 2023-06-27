@@ -40,31 +40,30 @@ arg_bots_ids=$(cat $temp_file | head -n 1)
 arg_sheet_ids=$(cat $temp_file | head -n 2 | tail -n 1)
 rm $temp_file
 
-# Run the Forge script and extract the Merkle proofs from stdout
-output=$(forge script scripts/generate/TransitionMerkleTree.s.sol \
+# Run the Forge script and extract the Merkle tree from stdout
+temp_file=$(mktemp)
+for (( i=0; i<$(wc -l <"$file"); i++ ))
+do
+  output=$(forge script scripts/generate/TransitionMerkleProof.s.sol \
+    --sig "run(uint256[],uint256[],uint256)" \
+    "$arg_bots_ids" \
+    "$arg_sheet_ids" \
+    "$i")
+  proof=$(echo "$output" | awk -F "proof: string " '{print $2}' | awk 'NF > 0')
+  bots_id=$(echo $arg_bots_ids | jq -c ".[${i}]")
+  sheet_id=$(echo $arg_sheet_ids | jq -c ".[${i}]")
+  element="{\"bots_id\":$bots_id,\"sheet_id\":$sheet_id,\"merkleProof\":$proof}"
+  if [ "$i" -eq 0 ]; then
+    echo "$element" >> $temp_file
+  else
+    echo ",$element" >> $temp_file
+  fi
+done
+output=$(forge script scripts/generate/TransitionMerkleRoot.s.sol \
   --sig "run(uint256[],uint256[])" \
   "$arg_bots_ids" \
   "$arg_sheet_ids")
-
-# Extract the Merkle root from stdout
 root=$(echo "$output" | awk -F "root: bytes32 " '{print $2}' | awk 'NF > 0')
-
-# Reformat the Merkle proofs into JSON format and write to a file
-index=0
-temp_file=$(mktemp)
-first_iteration=1
-echo "$output" | awk -F "proofs: string[[]] " '{print $2}' | awk 'NF > 0' | jq -c ".[]" | while read line; do
-    bots_id=$(echo $arg_bots_ids | jq -c ".[${index}]")
-    sheet_id=$(echo $arg_sheet_ids | jq -c ".[${index}]")
-    element="{\"bots_id\":$bots_id,\"sheet_id\":$sheet_id,\"merkleProof\":$line}"
-    if [ "$first_iteration" -eq 1 ]; then
-      echo "$element" >> $temp_file
-      first_iteration=0
-    else
-      echo ",$element" >> $temp_file
-    fi
-    index=$((index+1))
-done
 mkdir -p "out-json"
 echo "{\"tree\":[$(cat $temp_file)],\"root\":\"$root\"}" > "out-json/transition-merkle-tree.json"
 rm $temp_file
