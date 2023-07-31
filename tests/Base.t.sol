@@ -2,21 +2,39 @@
 pragma solidity ^0.8.13;
 
 import { IERC721 } from "@openzeppelin/token/ERC721/IERC721.sol";
+import { Strings } from "@openzeppelin/utils/Strings.sol";
 import { ERC721AMock } from "tests/mocks/ERC721AMock.sol";
 import { SpreadSheet } from "contracts/SpreadSheet.sol";
 import { Merkle } from "contracts/libraries/Merkle.sol";
 import { Test } from "forge-std/Test.sol";
-import { Users, Utils } from "tests/utils/Utils.sol";
+import { stdJson } from "forge-std/StdJson.sol";
+import { Users } from "tests/utils/Utils.sol";
 
 /// @notice Base test contract with common functionality for all tests.
-abstract contract Base_Test is Utils, Test {
+abstract contract Base_Test is Test {
+    using stdJson for string;
+    using Strings for uint256;
+    using Strings for bytes;
+
     /*//////////////////////////////////////////////////////////////////////////
                                      VARIABLES
     //////////////////////////////////////////////////////////////////////////*/
 
     Users internal users;
-    bytes32[][] internal allTransitionProofs;
-    bytes32[][] internal allAllocationProofs;
+    uint256 internal transitionTreeSize;
+    string internal transitionJSON;
+    uint256 internal allocationTreeSize;
+    string internal allocationJSON;
+    uint256 internal allocationSheetIdStart;
+    uint256 internal totalAllocation;
+    uint256 internal botId__claimViaTransition;
+    uint256 internal sheetId__claimViaTransition;
+    bytes32[] internal proof__claimViaTransition;
+    address internal allocatee__claimViaAllocation;
+    uint256 internal allocation__claimViaAllocation;
+    bytes32[] internal proof__claimViaAllocation;
+    string internal allocationPath = "/tests/mocks/data/mock-allocation-merkle-tree.json";
+    string internal transitionPath = "/tests/mocks/data/mock-transition-merkle-tree.json";
 
     /*//////////////////////////////////////////////////////////////////////////
                                    TEST CONTRACTS
@@ -31,22 +49,59 @@ abstract contract Base_Test is Utils, Test {
     //////////////////////////////////////////////////////////////////////////*/
 
     uint256 internal constant collectionSize = 8888;
-    uint256 internal constant allocationSize = 1809;
-    uint256 internal constant transitionSize = collectionSize - allocationSize;
-    uint256 private constant knuthConstant = 2_654_435_761;
 
     /*//////////////////////////////////////////////////////////////////////////
                                   SET-UP FUNCTION
     //////////////////////////////////////////////////////////////////////////*/
 
     function setUp() public virtual {
-        // Deploy the base test contracts.
+        // Infer config from Merkle tree JSON files.
+        allocationJSON = vm.readFile(string.concat(vm.projectRoot(), allocationPath));
+        transitionJSON = vm.readFile(string.concat(vm.projectRoot(), transitionPath));
+        allocationTreeSize = allocationJSON.readStringArray(".tree").length;
+        transitionTreeSize = transitionJSON.readStringArray(".tree").length;
+        for (uint256 i; i < allocationTreeSize; ++i) {
+            totalAllocation += allocationJSON.readUint(string.concat(".tree.[", i.toString(), "].allocation"));
+        }
+        allocationSheetIdStart = collectionSize - totalAllocation;
+
+        // Deploy the base test contracts and set config.
         sheets = new ERC721AMock("SheetHeads", "SHEET");
         bots = new ERC721AMock("Pawn Bots", "BOTS");
-        spreadSheet = new SpreadSheet(IERC721(address(sheets)), IERC721(address(bots)), transitionSize);
+        spreadSheet = new SpreadSheet(IERC721(address(sheets)), IERC721(address(bots)), allocationSheetIdStart);
 
         // Create users for testing.
         users = Users({ admin: createUser("Admin"), alice: createUser("Alice") });
+    }
+
+    /// @notice Create a transition tree entry for the given tree index.
+    function setTransitionEntry(uint256 index) public {
+        assert(index < transitionTreeSize);
+        botId__claimViaTransition = transitionJSON.readUint(string.concat(".tree.[", index.toString(), "].bots_id"));
+        sheetId__claimViaTransition = transitionJSON.readUint(string.concat(".tree.[", index.toString(), "].sheet_id"));
+        proof__claimViaTransition =
+            transitionJSON.readBytes32Array(string.concat(".tree.[", index.toString(), "].merkleProof"));
+    }
+
+    /// @notice Set the transition tree root.
+    function setTransitionRoot() public {
+        spreadSheet.setTransitionMerkleRoot(transitionJSON.readBytes32(".root"));
+    }
+
+    /// @notice Create an allocation tree entry for the given tree index.
+    function setAllocationEntry(uint256 index) public {
+        assert(index < allocationTreeSize);
+        allocatee__claimViaAllocation =
+            allocationJSON.readAddress(string.concat(".tree.[", index.toString(), "].allocatee"));
+        allocation__claimViaAllocation =
+            allocationJSON.readUint(string.concat(".tree.[", index.toString(), "].allocation"));
+        proof__claimViaAllocation =
+            allocationJSON.readBytes32Array(string.concat(".tree.[", index.toString(), "].merkleProof"));
+    }
+
+    /// @notice Set the allocation tree root.
+    function setAllocationRoot() public {
+        spreadSheet.setAllocationMerkleRoot(allocationJSON.readBytes32(".root"));
     }
 
     /// @dev Generates a user, labels its address, and funds it with test assets.
@@ -54,31 +109,5 @@ abstract contract Base_Test is Utils, Test {
         address payable user = payable(makeAddr(name));
         vm.deal({ account: user, newBalance: 100 ether });
         return user;
-    }
-
-    /// @dev Creates the transition merkle tree.
-    function createAndSetTransitionMerkleTree() internal returns (bytes32) {
-        bytes32[] memory transitionNodes = new bytes32[](transitionSize);
-        for (uint256 i; i < transitionNodes.length; ++i) {
-            transitionNodes[i] =
-                keccak256(abi.encodePacked(psuedoRandomUINT256From({ value: i, clock: transitionSize }), i));
-        }
-        bytes32 transitionRoot;
-        (transitionRoot, allTransitionProofs) = Merkle.getTree(transitionNodes);
-        spreadSheet.setTransitionMerkleRoot(transitionRoot);
-        return transitionRoot;
-    }
-
-    /// @dev Creates the allocation merkle tree.
-    function createAndSetAllocationMerkleTree() internal returns (bytes32) {
-        bytes32[] memory allocationNodes = new bytes32[](allocationSize);
-        for (uint256 i; i < allocationNodes.length; ++i) {
-            allocationNodes[i] = keccak256(abi.encodePacked(psuedoRandomAddressFrom(i), allocationSize));
-        }
-        allocationNodes[0] = keccak256(abi.encodePacked(users.alice, allocationSize));
-        bytes32 allocationRoot;
-        (allocationRoot, allAllocationProofs) = Merkle.getTree(allocationNodes);
-        spreadSheet.setAllocationMerkleRoot(allocationRoot);
-        return allocationRoot;
     }
 }

@@ -117,6 +117,8 @@ To make it easier to perform some tasks within the repo, a few commands are avai
 | `make install package=<PACKAGE_NAME>` | Install one or more dependencies.                        |
 | `make fmt-check`                      | Lint the contracts.                                      |
 | `make fmt-write`                      | Format the contracts.                                    |
+| `make generate-allocation-merkle-tree`| Generate the allocation Merkle tree.                     |
+| `make generate-transition-merkle-tree`| Generate the transition Merkle tree.                     |
 
 ### Test Commands
 

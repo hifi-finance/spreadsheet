@@ -18,6 +18,9 @@ test = "tests"                # The tests directory
 script = "scripts"            # The scripts directory
 broadcast = "broadcast"       # The broadcast transaction logs directory
 cache_path = "cache"          # The block data cache directory
+fs_permissions = [            # The file system permissions
+    { access = "read", path = "./tests/mocks/data"}
+]
 out = "artifacts"             # The compilation output directory
 libs = ["modules"]            # A list of library directories
 cache = true                  # Enable caching block data

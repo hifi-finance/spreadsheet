@@ -6,26 +6,25 @@ import { Base_Test } from "../../Base.t.sol";
 contract ClaimSheetsViaAllocation_Unit_Fuzz_Test is Base_Test {
     function setUp() public virtual override {
         Base_Test.setUp();
-        createAndSetAllocationMerkleTree();
-        bots.mint(address(users.alice), collectionSize);
+        Base_Test.setAllocationRoot();
         sheets.mint(address(spreadSheet), collectionSize);
     }
 
-    function testFuzz_ClaimSheetsViaAllocation(uint256 claimSize) external {
-        vm.pauseGasMetering();
+    function testFuzz_ClaimSheetsViaAllocation(uint16 claimSize, uint8 claimIndex) external {
         vm.assume(claimSize >= 1);
-        vm.assume(claimSize <= allocationSize);
+        vm.assume(claimIndex < allocationTreeSize);
+        setAllocationEntry(claimIndex);
+        vm.assume(claimSize <= allocation__claimViaAllocation);
 
         uint256[] memory sheetIdsToClaim = new uint256[](claimSize);
 
         for (uint256 i; i < claimSize; ++i) {
-            sheetIdsToClaim[i] = psuedoRandomUINT256From({ value: i, clock: allocationSize }) + transitionSize;
+            sheetIdsToClaim[i] = allocationSheetIdStart + i;
         }
 
-        vm.prank(address(users.alice));
+        vm.prank(allocatee__claimViaAllocation);
         bots.setApprovalForAll(address(spreadSheet), true);
-        vm.prank(address(users.alice));
-        vm.resumeGasMetering();
-        spreadSheet.claimSheetsViaAllocation(sheetIdsToClaim, allocationSize, allAllocationProofs[0]);
+        vm.prank(allocatee__claimViaAllocation);
+        spreadSheet.claimSheetsViaAllocation(sheetIdsToClaim, allocation__claimViaAllocation, proof__claimViaAllocation);
     }
 }
