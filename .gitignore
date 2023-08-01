@@ -15,8 +15,3 @@ cache/
 
 # Temporary files
 **/tmp/
-
-# Merkle data
-in-csv/**
-!/in-csv/allocation-merkle-data.csv.example
-!/in-csv/transition-merkle-data.csv.example
