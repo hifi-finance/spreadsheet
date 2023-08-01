@@ -48,7 +48,8 @@ rm $temp_file
 
 # Run the Forge script and extract the Merkle tree from stdout
 temp_file=$(mktemp)
-for (( i=0; i<$(wc -l <"$file"); i++ ))
+tree_length=$(wc -l <"$file" | awk '{print $1}')
+for (( i=0; i<tree_length; i++ ))
 do
   output=$(forge script scripts/generate/AllocationMerkleProof.s.sol \
     --sig "run(address[],uint256[],uint256)" \
@@ -56,14 +57,32 @@ do
     "$arg_allocations" \
     "$i")
   proof=$(echo "$output" | awk -F "proof: string " '{print $2}' | awk 'NF > 0')
+  padded_proof="["
+  for (( j=0; j<$(echo "$proof" | jq -c '. | length'); j++ )) do
+    hex=$(echo "$proof" | jq -c ".[${j}]" | tr -d '"')
+    hex=${hex#0x}
+    zeroes_to_pad=$((64 - ${#hex}))
+    if [ "$zeroes_to_pad" -eq 0 ]; then
+      padded_hex="0x$hex"
+    else
+      padded_hex="0x$(printf "%0${zeroes_to_pad}d" 0)$hex"
+    fi
+    if [ "$j" -eq 0 ]; then
+      padded_proof+="\"$padded_hex\""
+    else
+      padded_proof+=",\"$padded_hex\""
+    fi
+  done
+  padded_proof+="]"
   allocatee=$(echo $out_allocatees | jq -c ".[${i}]")
   allocation=$(echo $arg_allocations | jq -c ".[${i}]")
-  element="{\"allocatee\":$allocatee,\"allocation\":$allocation,\"merkleProof\":$proof}"
+  element="{\"allocatee\":$allocatee,\"allocation\":$allocation,\"merkleProof\":$padded_proof}"
   if [ "$i" -eq 0 ]; then
     echo "$element" >> $temp_file
   else
     echo ",$element" >> $temp_file
   fi
+  echo "$((i+1)) of $tree_length"
 done
 output=$(forge script scripts/generate/AllocationMerkleRoot.s.sol \
   --sig "run(address[],uint256[])" \
