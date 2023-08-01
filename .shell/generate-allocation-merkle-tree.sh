@@ -49,6 +49,18 @@ rm $temp_file
 # Run the Forge script and extract the Merkle tree from stdout
 temp_file=$(mktemp)
 tree_length=$(wc -l <"$file" | awk '{print $1}')
+draw_progress_bar() {
+  local current_progress=$1
+  local total_progress=$2
+  local percentage=$((current_progress * 100 / total_progress))
+  local progress_char_width=$((percentage / 2))  # half of 100
+  local rest_char_width=$((50 - progress_char_width))
+  local filled_part=$(printf "%${progress_char_width}s" "")
+  local empty_part=$(printf "%${rest_char_width}s" "")
+  filled_part=${filled_part// /#}
+  empty_part=${empty_part// /-}
+  printf "\rProgress: [%s%s] %d%%" "$filled_part" "$empty_part" "$percentage"
+}
 for (( i=0; i<tree_length; i++ ))
 do
   output=$(forge script scripts/generate/AllocationMerkleProof.s.sol \
@@ -82,7 +94,7 @@ do
   else
     echo ",$element" >> $temp_file
   fi
-  echo "$((i+1)) of $tree_length"
+  draw_progress_bar $((i + 1)) $tree_length
 done
 output=$(forge script scripts/generate/AllocationMerkleRoot.s.sol \
   --sig "run(address[],uint256[])" \
