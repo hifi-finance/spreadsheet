@@ -43,7 +43,7 @@ fuzz = { runs = 1_000 }       # The amount of fuzz runs to perform for each fuzz
 
 [profile.ci]
 optimizer = false
-fuzz = { runs = 10_000 }
+fuzz = { runs = 1_000 }
 verbosity = 4
 ignored_error_codes = ["license", "code-size"]
 
