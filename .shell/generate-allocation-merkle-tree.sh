@@ -9,6 +9,8 @@
 # Strict mode: https://gist.github.com/vncsna/64825d5609c146e80de8b1fd623011ca
 set -euo pipefail
 
+source .shell/utils.sh
+
 # Load the arguments while using default values
 file=${1:-"in-csv/allocation-merkle-data.csv"}
 
@@ -49,18 +51,6 @@ rm $temp_file
 # Run the Forge script and extract the Merkle tree from stdout
 temp_file=$(mktemp)
 tree_length=$(wc -l <"$file" | awk '{print $1}')
-draw_progress_bar() {
-  local current_progress=$1
-  local total_progress=$2
-  local percentage=$((current_progress * 100 / total_progress))
-  local progress_char_width=$((percentage / 2))  # half of 100
-  local rest_char_width=$((50 - progress_char_width))
-  local filled_part=$(printf "%${progress_char_width}s" "")
-  local empty_part=$(printf "%${rest_char_width}s" "")
-  filled_part=${filled_part// /#}
-  empty_part=${empty_part// /-}
-  printf "\rProgress: [%s%s] %d%%" "$filled_part" "$empty_part" "$percentage"
-}
 for (( i=0; i<tree_length; i++ ))
 do
   output=$(forge script scripts/generate/AllocationMerkleProof.s.sol \
@@ -68,27 +58,10 @@ do
     "$arg_allocatees" \
     "$arg_allocations" \
     "$i")
-  proof=$(echo "$output" | awk -F "proof: string " '{print $2}' | awk 'NF > 0')
-  padded_proof="["
-  for (( j=0; j<$(echo "$proof" | jq -c '. | length'); j++ )) do
-    hex=$(echo "$proof" | jq -c ".[${j}]" | tr -d '"')
-    hex=${hex#0x}
-    zeroes_to_pad=$((64 - ${#hex}))
-    if [ "$zeroes_to_pad" -eq 0 ]; then
-      padded_hex="0x$hex"
-    else
-      padded_hex="0x$(printf "%0${zeroes_to_pad}d" 0)$hex"
-    fi
-    if [ "$j" -eq 0 ]; then
-      padded_proof+="\"$padded_hex\""
-    else
-      padded_proof+=",\"$padded_hex\""
-    fi
-  done
-  padded_proof+="]"
+  proof=$(pad_proof $(echo "$output" | awk -F "proof: string " '{print $2}' | awk 'NF > 0'))
   allocatee=$(echo $out_allocatees | jq -c ".[${i}]")
   allocation=$(echo $arg_allocations | jq -c ".[${i}]")
-  element="{\"allocatee\":$allocatee,\"allocation\":$allocation,\"merkleProof\":$padded_proof}"
+  element="{\"allocatee\":$allocatee,\"allocation\":$allocation,\"merkleProof\":$proof}"
   if [ "$i" -eq 0 ]; then
     echo "$element" >> $temp_file
   else
