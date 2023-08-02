@@ -25,7 +25,7 @@ jobs:
           submodules: "recursive"
 
       - name: "Install Foundry"
-        uses: "foundry-rs/foundry-toolchain@v1"
+        uses: "foundry-rs/foundry-toolchain@v1.0.10"
 
       - name: "Lint the code"
         run: |
@@ -41,7 +41,7 @@ jobs:
           submodules: "recursive"
 
       - name: "Install Foundry"
-        uses: "foundry-rs/foundry-toolchain@v1"
+        uses: "foundry-rs/foundry-toolchain@v1.0.10"
 
       - name: "Compile the contracts"
         run: |
@@ -58,7 +58,7 @@ jobs:
           submodules: "recursive"
 
       - name: "Install Foundry"
-        uses: "foundry-rs/foundry-toolchain@v1"
+        uses: "foundry-rs/foundry-toolchain@v1.0.10"
 
       - name: "Test the contracts"
         run: |
