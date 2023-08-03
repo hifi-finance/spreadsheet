@@ -110,15 +110,15 @@ To make it easier to perform some tasks within the repo, a few commands are avai
 
 ### Build Commands
 
-| Command                               | Action                                                   |
-| ------------------------------------- | -------------------------------------------------------- |
-| `make build`                          | Compile all contracts in the repo, including submodules. |
-| `make clean`                          | Delete the build artifacts and cache directories.        |
-| `make install package=<PACKAGE_NAME>` | Install one or more dependencies.                        |
-| `make fmt-check`                      | Lint the contracts.                                      |
-| `make fmt-write`                      | Format the contracts.                                    |
-| `make generate-allocation-merkle-tree`| Generate the allocation Merkle tree.                     |
-| `make generate-transition-merkle-tree`| Generate the transition Merkle tree.                     |
+| Command                                | Action                                                   |
+| -------------------------------------- | -------------------------------------------------------- |
+| `make build`                           | Compile all contracts in the repo, including submodules. |
+| `make clean`                           | Delete the build artifacts and cache directories.        |
+| `make install package=<PACKAGE_NAME>`  | Install one or more dependencies.                        |
+| `make fmt-check`                       | Lint the contracts.                                      |
+| `make fmt-write`                       | Format the contracts.                                    |
+| `make generate-allocation-merkle-tree` | Generate the allocation Merkle tree.                     |
+| `make generate-transition-merkle-tree` | Generate the transition Merkle tree.                     |
 
 ### Test Commands
 
@@ -132,9 +132,10 @@ Specific tests can be run using `forge test` conventions, specified in more deta
 
 ### Deploy Commands
 
-| Command       | Description                                                                       |
-| ------------- | --------------------------------------------------------------------------------- |
-| `make deploy` | Deploy contract (e.g. `make deploy sheet=0x123... bots=0x123... network=mainnet`) |
+| Command                   | Description                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `make deploy-sheetheads`  | Deploy SheetHeads contract (e.g. `make deploy sheet=0x123... bots=0x123... network=mainnet`) |
+| `make deploy-spreadsheet` | Deploy SpreadSheet contract (e.g. `make deploy network=mainnet`)                             |
 
 For instructions on how to deploy to a testnet or mainnet, check out the
 [Solidity Scripting tutorial](https://book.getfoundry.sh/tutorials/solidity-scripting.html).

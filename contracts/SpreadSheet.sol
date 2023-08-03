@@ -117,13 +117,13 @@ contract SpreadSheet is Ownable, Pausable {
                                     CONSTRUCTOR
     //////////////////////////////////////////////////////////////////////////*/
 
-    /// @param _sheetNFT The Sheetheads NFT contract whose tokens are to be distributed.
-    /// @param _botsNFT The Pawn Bots NFT contract whose tokens are to be burned.
-    /// @param _allocationSheetIdStart The ID of the first SHEET to be allocated.
-    constructor(IERC721 _sheetNFT, IERC721 _botsNFT, uint256 _allocationSheetIdStart) {
-        sheetNFT = _sheetNFT;
-        botsNFT = _botsNFT;
-        allocationSheetIdStart = _allocationSheetIdStart;
+    /// @param sheetNFT_ The Sheetheads NFT contract whose tokens are to be distributed.
+    /// @param botsNFT_ The Pawn Bots NFT contract whose tokens are to be burned.
+    /// @param allocationSheetIdStart_ The ID of the first SHEET to be allocated.
+    constructor(IERC721 sheetNFT_, IERC721 botsNFT_, uint256 allocationSheetIdStart_) {
+        sheetNFT = sheetNFT_;
+        botsNFT = botsNFT_;
+        allocationSheetIdStart = allocationSheetIdStart_;
     }
 
     /*//////////////////////////////////////////////////////////////////////////

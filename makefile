@@ -21,7 +21,14 @@ clean::
 coverage::
 	@forge coverage
 
-deploy::
+deploy-sheetheads::
+	@forge script scripts/deploy/SheetHeads.s.sol\
+		--broadcast\
+		--verify\
+		--rpc-url $(network)\
+		--sig "run()"\
+
+deploy-spreadsheet::
 	@forge script scripts/deploy/SpreadSheet.s.sol\
 		--broadcast\
 		--verify\
