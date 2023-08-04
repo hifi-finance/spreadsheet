@@ -132,10 +132,10 @@ Specific tests can be run using `forge test` conventions, specified in more deta
 
 ### Deploy Commands
 
-| Command                   | Description                                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| `make deploy-sheetheads`  | Deploy SheetHeads contract (e.g. `make deploy sheet=0x123... bots=0x123... network=mainnet`) |
-| `make deploy-spreadsheet` | Deploy SpreadSheet contract (e.g. `make deploy network=mainnet`)                             |
+| Command                   | Description                                                                                               |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `make deploy-sheetheads`  | Deploy SheetHeads contract (e.g. `make deploy-sheetheads network=mainnet`)                                |
+| `make deploy-spreadsheet` | Deploy SpreadSheet contract (e.g. `make deploy-spreadsheet sheet=0x123... bots=0x123... network=mainnet`) |
 
 For instructions on how to deploy to a testnet or mainnet, check out the
 [Solidity Scripting tutorial](https://book.getfoundry.sh/tutorials/solidity-scripting.html).
