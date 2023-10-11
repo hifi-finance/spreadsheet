@@ -169,6 +169,7 @@ contract SpreadSheet is Ownable, Pausable {
     /// @dev Emits a {ClaimSheetsViaTransition} event.
     ///
     /// Requirements:
+    /// - The contract must not be paused.
     /// - All provided inputs must be the same length.
     /// - The number of SHEETs to claim must be greater than 0.
     /// - Each provided transition Merkle proof must be valid.
@@ -212,6 +213,7 @@ contract SpreadSheet is Ownable, Pausable {
     /// @dev Emits a {ClaimSheetsViaAllocation} event.
     ///
     /// Requirements:
+    /// - The contract must not be paused.
     /// - All provided inputs must be the same length.
     /// - The number of SHEETs to claim must be greater than 0.
     /// - The provided allocation Merkle proof must be valid.
@@ -264,6 +266,7 @@ contract SpreadSheet is Ownable, Pausable {
     /// @dev Emits a {AdminWithdraw} event.
     ///
     /// Requirements:
+    /// - The contract must be paused.
     /// - The caller must be the owner.
     ///
     /// @param recipient The address to withdraw to.
